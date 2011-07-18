@@ -13,6 +13,9 @@
 ;; since I personally have only used this for Gosu so far,
 (defvar gosu-program-mode-map (make-keymap))
 
+(make-variable-buffer-local 'gosu-test-command)
+(make-variable-buffer-local 'gosu-program-command)
+
 (define-key gosu-program-mode-map (kbd "C-c C-j") 'gosu-run-program)
 (define-key gosu-program-mode-map (kbd "C-c C-l") 'gosu-reset-and-clear)
 (define-key gosu-program-mode-map (kbd "C-c C-t") 'gosu-run-tests)
@@ -30,7 +33,7 @@
 
 (defun gosu-program-load-profile (profile)
   (if profile
-      (progn (setq gosu-program-command(cdr (assoc 'run-command profile)))
+      (progn (setq gosu-program-command (cdr (assoc 'run-command profile)))
              (setq gosu-test-command (cdr (assoc 'test-command profile))))
     (message "Error! Specified profile does not exist.")))
 (defun gosu-program-profile ()
@@ -59,7 +62,7 @@
 (defun gosu-run-cmd (cmd msg)
   (interactive)
   (gosu-interrupt-and-clear)
-  (comint-simple-send gosu-program-mode-process 
+  (comint-simple-send (get-buffer-process (current-buffer)) 
                       (concat "echo '" msg " Command: " cmd "'"))
   (sleep-for 0 50)
   (save-excursion
@@ -67,8 +70,8 @@
     (beginning-of-line)
     (kill-line))
   (end-of-buffer)
-  (message "Sending %s to %s." cmd gosu-program-mode-process)
-  (comint-simple-send gosu-program-mode-process cmd))
+  (message "Sending %s to %s." cmd (get-buffer-process (current-buffer)))
+  (comint-simple-send (get-buffer-process (current-buffer)) cmd))
 
 (defun gosu-run-tests ()
   (interactive)
@@ -88,10 +91,9 @@
 
 ;; Sets up the buffer-specific variables to a default value (Ronin commands, in this case).
 (defun gosu-program-mode-start ()
-  (set (make-local-variable 'gosu-test-command) "vark test")
-  (set (make-local-variable 'gosu-program-command) "vark server")
-  (set (make-local-variable 'gosu-program-mode-process)
-       (get-buffer-process (current-buffer))))
+  (set 'gosu-test-command  "./run-tests.gsp")
+  (set 'gosu-program-command  "../bin/client.gsp -m daemon")
+  (message "Process: %s" (get-buffer-process (current-buffer))))
 
 (define-minor-mode gosu-program-mode "Simpler interaction with gosu programs."
   :init-value nil
@@ -111,6 +113,8 @@
   (gosu-program-load-profile (assoc profile  gosu-program-profiles)))
 
 (defvar example-server-location "~/server")
-(defun tehamon-server ()
+(defun example-server ()
   (interactive)
-  (switch-to-program "server" tehamon-server-location "server"))
+  (switch-to-program "server" example-server-location "server"))
+
+(provide 'gosu-program-mode)
